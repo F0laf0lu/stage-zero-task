@@ -20,6 +20,6 @@ from .views import ClassifyView, IndexView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api', IndexView.as_view(), name="index"),
+    path('', IndexView.as_view(), name="index"),
     path('api/classify', ClassifyView.as_view(), name='classif')
 ]
