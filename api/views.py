@@ -15,6 +15,11 @@ def _cors(response):
 def _error(message, status_code):
     return _cors(Response({"status": "error", "message": message}, status=status_code))
 
+class IndexView(APIView):
+
+    def get(self, request, *args, **kwargs):
+        return Response({"status":"success", "message":"Welcome"}, status=status.HTTP_200_OK)
+
 
 class ClassifyView(APIView):
 
