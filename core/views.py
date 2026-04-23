@@ -148,10 +148,11 @@ def parse_sorting(request):
     order = request.query_params.get("order", "asc").lower()
 
     if sort_by and sort_by not in VALID_SORT_FIELDS:
-        raise ValueError(f"'sort_by' must be one of: {', '.join(sorted(VALID_SORT_FIELDS))}")
+        # raise ValueError(f"'sort_by' must be one of: {', '.join(sorted(VALID_SORT_FIELDS))}")
+        raise ValueError("Invalid parameter type")
 
     if order not in ("asc", "desc"):
-        raise ValueError("'order' must be 'asc' or 'desc'")
+        raise ValueError("Invalid parameter type")
 
     return sort_by, order
 
@@ -264,7 +265,7 @@ class ProfileSearchView(APIView):
     def get(self, request, *args, **kwargs):
         q = request.query_params.get("q", "").strip()
         if not q:
-            return _error("Missing or empty parameter 'q'", status.HTTP_400_BAD_REQUEST)
+            return _error("Missing or empty parameter", status.HTTP_400_BAD_REQUEST)
 
         filters = parse_nl_query(q)
         if filters is None:
