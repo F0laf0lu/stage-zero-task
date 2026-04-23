@@ -123,7 +123,7 @@ def parse_nl_query(q: str) -> dict | None:
     # --- Explicit age bounds ("above X", "over X", "below X", "under X") ---
     above_match = re.search(r'\b(?:above|over|older than)\s+(\d+)\b', q)
     if above_match:
-        filters["min_age"] = int(above_match.group(1))
+        filters["min_age"] = int(above_match.group(1)) + 1
 
     below_match = re.search(r'\b(?:below|under|younger than)\s+(\d+)\b', q)
     if below_match:
