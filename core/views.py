@@ -12,63 +12,6 @@ from core.services import ExternalAPIError, agify, genderize, nationalize
 # Helpers
 # ---------------------------------------------------------------------------
 
-COUNTRY_NAME_TO_CODE = {
-    "afghanistan": "AF", "albania": "AL", "algeria": "DZ", "angola": "AO",
-    "argentina": "AR", "australia": "AU", "austria": "AT", "azerbaijan": "AZ",
-    "bahrain": "BH", "bangladesh": "BD", "belarus": "BY", "belgium": "BE",
-    "benin": "BJ", "bolivia": "BO", "botswana": "BW", "brazil": "BR",
-    "bulgaria": "BG", "burkina faso": "BF", "burundi": "BI",
-    "cameroon": "CM", "canada": "CA", "cape verde": "CV",
-    "central african republic": "CF", "chad": "TD", "chile": "CL",
-    "china": "CN", "colombia": "CO", "comoros": "KM", "congo": "CG",
-    "democratic republic of congo": "CD", "dr congo": "CD", "drc": "CD",
-    "costa rica": "CR", "croatia": "HR", "cuba": "CU",
-    "czech republic": "CZ", "czechia": "CZ",
-    "denmark": "DK", "djibouti": "DJ",
-    "ecuador": "EC", "egypt": "EG", "eritrea": "ER", "estonia": "EE",
-    "ethiopia": "ET",
-    "finland": "FI", "france": "FR",
-    "gabon": "GA", "gambia": "GM", "georgia": "GE", "germany": "DE",
-    "ghana": "GH", "greece": "GR", "guatemala": "GT", "guinea": "GN",
-    "guinea-bissau": "GW",
-    "haiti": "HT", "honduras": "HN", "hungary": "HU",
-    "india": "IN", "indonesia": "ID", "iran": "IR", "iraq": "IQ",
-    "ireland": "IE", "israel": "IL", "italy": "IT", "ivory coast": "CI",
-    "cote d'ivoire": "CI",
-    "jamaica": "JM", "japan": "JP", "jordan": "JO",
-    "kazakhstan": "KZ", "kenya": "KE", "kuwait": "KW",
-    "latvia": "LV", "lebanon": "LB", "lesotho": "LS", "liberia": "LR",
-    "libya": "LY", "lithuania": "LT",
-    "madagascar": "MG", "malawi": "MW", "malaysia": "MY", "mali": "ML",
-    "mauritania": "MR", "mauritius": "MU", "mexico": "MX",
-    "moldova": "MD", "mongolia": "MN", "morocco": "MA", "mozambique": "MZ",
-    "myanmar": "MM",
-    "namibia": "NA", "nepal": "NP", "netherlands": "NL",
-    "new zealand": "NZ", "nicaragua": "NI", "niger": "NE", "nigeria": "NG",
-    "norway": "NO",
-    "oman": "OM",
-    "pakistan": "PK", "palestine": "PS", "panama": "PA",
-    "papua new guinea": "PG", "paraguay": "PY", "peru": "PE",
-    "philippines": "PH", "poland": "PL", "portugal": "PT",
-    "qatar": "QA",
-    "romania": "RO", "russia": "RU", "rwanda": "RW",
-    "saudi arabia": "SA", "senegal": "SN", "sierra leone": "SL",
-    "singapore": "SG", "somalia": "SO", "south africa": "ZA",
-    "south korea": "KR", "south sudan": "SS", "spain": "ES",
-    "sri lanka": "LK", "sudan": "SD", "swaziland": "SZ", "eswatini": "SZ",
-    "sweden": "SE", "switzerland": "CH", "syria": "SY",
-    "taiwan": "TW", "tanzania": "TZ", "thailand": "TH", "togo": "TG",
-    "tunisia": "TN", "turkey": "TR",
-    "uganda": "UG", "ukraine": "UA",
-    "united arab emirates": "AE", "uae": "AE",
-    "united kingdom": "GB", "uk": "GB", "britain": "GB",
-    "united states": "US", "usa": "US", "america": "US",
-    "uruguay": "UY", "uzbekistan": "UZ",
-    "venezuela": "VE", "vietnam": "VN",
-    "yemen": "YE",
-    "zambia": "ZM", "zimbabwe": "ZW",
-}
-
 VALID_SORT_FIELDS = {"age", "created_at", "gender_probability"}
 VALID_AGE_GROUPS = {"child", "teenager", "adult", "senior"}
 
@@ -136,16 +79,7 @@ def parse_nl_query(q: str) -> dict | None:
         q
     )
     if country_match:
-        country_text = country_match.group(1).strip()
-        code = COUNTRY_NAME_TO_CODE.get(country_text)
-        if code:
-            filters["country_id"] = code
-        else:
-            # Try partial match for multi-word countries
-            for name, iso in COUNTRY_NAME_TO_CODE.items():
-                if name in country_text or country_text in name:
-                    filters["country_id"] = iso
-                    break
+        filters["country_name"] = country_match.group(1).strip()
 
     # Require at least one meaningful filter to avoid passing everything through
     if not filters:
@@ -166,6 +100,10 @@ def apply_filters(queryset, params: dict):
     country_id = params.get("country_id")
     if country_id:
         queryset = queryset.filter(country_id__iexact=country_id)
+
+    country_name = params.get("country_name")
+    if country_name:
+        queryset = queryset.filter(country_name__icontains=country_name)
 
     min_age = params.get("min_age")
     if min_age is not None:
@@ -332,7 +270,7 @@ class ProfileSearchView(APIView):
         if filters is None:
             return Response(
                 {"status": "error", "message": "Unable to interpret query"},
-                status=status.HTTP_200_OK,
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # --- Parse pagination ---
