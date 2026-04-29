@@ -18,6 +18,9 @@ class UserManager(BaseUserManager):
         user.set_password()
         user.save(using=self._db)
         return user
+    
+
+
 
 
 class User(AbstractUser):
@@ -28,7 +31,7 @@ class User(AbstractUser):
 
     id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     github_id = models.CharField(max_length=255)
-    email = models.EmailField()
+    email = models.EmailField(unique=True)
     avatar_url = models.TextField()
     role = models.CharField(max_length=255, choices=UserRole.choices)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -59,3 +62,5 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.name
+
+

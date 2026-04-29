@@ -22,5 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', IndexView.as_view(), name="index"),
     path('api/classify', ClassifyView.as_view(), name='classify'),
-    path('api/', include('core.urls'))
+    path('api/', include('core.urls')),
+    path('auth/', include('auth.urls')),
 ]
