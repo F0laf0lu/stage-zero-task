@@ -1,29 +1,12 @@
-[tool.black]
+[tool.ruff]
 line-length = 100
-target-version = ['py312', 'py313']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # Exclude these directories
+target-version = "py313"
 
-  | migrations
-  | venv
-  | env
+[tool.ruff.lint]
+# Enable Pyflakes (F), Pycodestyle (E, W), isort (I), and Django-specific rules (DJ)
+select = ["F", "E", "W", "I", "DJ"]
+ignore = ["E203"] # Common conflict with formatting
 
-  | .venv
-  | .git
-  | __pycache__
+[tool.ruff.lint.isort]
 
-  | build
-  | dist
-)/
-'''
-
-
-[tool.isort]
-profile = "django"
-combine_as_imports = true
-include_trailing_comma = true
-line_length = 88
-multi_line_output = 3
-known_first_party = ["config"]
+known-first-party = ["api"]

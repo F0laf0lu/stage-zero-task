@@ -1,5 +1,3 @@
-import re
-
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -101,7 +99,8 @@ class ProfileListCreateView(APIView):
                     raw_params[field] = cast(val)
                 except (ValueError, TypeError):
                     return _error(
-                        f"'{field}' must be a valid number", status.HTTP_422_UNPROCESSABLE_ENTITY
+                        f"'{field}' must be a valid number",
+                        status.HTTP_422_UNPROCESSABLE_ENTITY,
                     )
 
         for field in ("gender", "age_group", "country_id"):

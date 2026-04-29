@@ -37,7 +37,6 @@ CODE_CHALLENGE = base64.urlsafe_b64encode(sha256_hash).decode("utf-8").replace("
 
 
 class AuthView(APIView):
-
     def get(self, request, *args, **kwargs):
 
         return redirect(
@@ -46,14 +45,20 @@ class AuthView(APIView):
 
 
 class UserSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = User
-        fields = ["id", "github_id", "avatar_url", "email", "role", "last_login", "created_at"]
+        fields = [
+            "id",
+            "github_id",
+            "avatar_url",
+            "email",
+            "role",
+            "last_login",
+            "created_at",
+        ]
 
 
 class GithubCallBackView(APIView):
-
     def get(self, request, *args, **kwargs):
         auth_code = request.query_params.get("code")
         state = request.query_params.get("state", None)

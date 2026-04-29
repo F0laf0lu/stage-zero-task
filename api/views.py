@@ -18,13 +18,11 @@ def _error(message, status_code):
 
 
 class IndexView(APIView):
-
     def get(self, request, *args, **kwargs):
         return Response({"status": "success", "message": "Welcome"}, status=status.HTTP_200_OK)
 
 
 class ClassifyView(APIView):
-
     def options(self, request, *args, **kwargs):
         return _cors(Response(status=status.HTTP_200_OK))
 
