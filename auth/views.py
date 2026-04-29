@@ -12,6 +12,8 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from auth.services import jwt_service
+
 User = get_user_model()
 
 
@@ -127,7 +129,14 @@ class GithubCallBackView(APIView):
             )
             user.last_login = timezone.now()
             user.save(update_fields=["last_login"])
-            return Response({"user": UserSerializer(user).data}, status.HTTP_200_OK)
+            access_token, refresh_token = jwt_service({"id": str(user.id), "role": user.role})
+            return Response(
+                {
+                    "user": UserSerializer(user).data,
+                    "tokens": {"access_token": access_token, "refresh_token": refresh_token},
+                },
+                status.HTTP_200_OK,
+            )
         except Exception as e:
             return Response(
                 {"message": "Error getting email", "error": str(e)},

@@ -1,5 +1,4 @@
 asgiref==3.11.1
-black==26.3.1
 certifi==2026.2.25
 cfgv==3.5.0
 charset-normalizer==3.4.7
@@ -10,11 +9,9 @@ django-cors-headers==4.9.0
 django-rest-framework==0.1.0
 djangorestframework==3.17.1
 filelock==3.29.0
-flake8==7.3.0
 gunicorn==25.3.0
 identify==2.6.19
 idna==3.11
-isort==8.0.1
 mccabe==0.7.0
 mypy_extensions==1.1.0
 nodeenv==1.10.0
@@ -26,9 +23,11 @@ pycodestyle==2.14.0
 pyflakes==3.4.0
 PyJWT==2.12.1
 python-discovery==1.2.2
+python-dotenv==1.2.2
 pytokens==0.4.1
 PyYAML==6.0.3
 requests==2.33.1
+ruff==0.15.12
 sqlparse==0.5.5
 urllib3==2.6.3
 uuid6==2025.0.1
