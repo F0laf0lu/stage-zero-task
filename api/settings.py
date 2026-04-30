@@ -53,6 +53,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.CheckVersionHeaderMiddleware",
+    "api.middleware.RequestLoggerMiddleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -140,3 +141,23 @@ REST_FRAMEWORK = {
 }
 
 AUTH_USER_MODEL = "core.User"
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"level": "INFO", "class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "request_logger": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+    },
+}
