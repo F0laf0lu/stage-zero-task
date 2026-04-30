@@ -1,8 +1,10 @@
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import Profile
+from core.permissions import CanCreateProfile, CanUpdateProfile
 from core.serializers import ProfileSerializer
 from core.services import ExternalAPIError, agify, genderize, nationalize
 from core.utils import apply_filters, parse_nl_query, parse_pagination, parse_sorting
@@ -32,6 +34,8 @@ def _paginate(queryset, page, limit):
 
 
 class ProfileListCreateView(APIView):
+    permission_classes = [CanCreateProfile]
+
     def post(self, request, *args, **kwargs):
         if "name" not in request.data:
             return _error("'name' is required", status.HTTP_400_BAD_REQUEST)
@@ -135,6 +139,8 @@ class ProfileListCreateView(APIView):
 
 
 class ProfileSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, *args, **kwargs):
         q = request.query_params.get("q", "").strip()
         if not q:
@@ -172,6 +178,8 @@ class ProfileSearchView(APIView):
 
 
 class ProfileDetailView(APIView):
+    permission_classes = [CanUpdateProfile]
+
     def _get_object(self, id):
         try:
             return Profile.objects.get(pk=id)

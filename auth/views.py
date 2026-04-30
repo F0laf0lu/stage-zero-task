@@ -8,11 +8,12 @@ import requests
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect
 from django.utils import timezone
-from rest_framework import serializers, status
+from rest_framework import permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from auth.services import jwt_service
+from auth.models import Token
+from auth.services import jwt_decode, jwt_service
 
 User = get_user_model()
 
@@ -141,4 +142,76 @@ class GithubCallBackView(APIView):
             return Response(
                 {"message": "Error getting email", "error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class RefreshTokenView(APIView):
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny()]
+
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.data.get("refresh_token", None)
+        if refresh_token is None:
+            return Response(
+                {"status": "error", "message": "Validation error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payload = jwt_decode(refresh_token)
+        if payload["type"] != "refresh":
+            return Response(
+                {"status": "error", "message": "Invalid Token type"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            token = Token.objects.get(token=refresh_token)
+            if token.is_revoked:
+                return Response(
+                    {"status": "error", "message": "Invalid Token"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if token.user.id != payload["user"]["id"]:
+                return Response(
+                    {"status": "error", "message": "Invalid Token"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except Token.DoesNotExist:
+            return Response(
+                {"status": "error", "message": "Invalid Token"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        token.is_revoked = True
+        token.save()
+
+        new_access_token, new_refresh_token = jwt_service(
+            {"id": payload["user"]["id"], "role": payload["user"]["role"]}
+        )
+        Token.objects.create(token=new_refresh_token, type="refresh", user=token.user)
+
+        return Response(
+            {
+                "status": "success",
+                "tokens": {"access_token": new_access_token, "refresh_token": new_refresh_token},
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class LogoutView(APIView):
+    def post(self, request):
+        refresh_token = request.data.get("refresh_token", None)
+        if refresh_token is None:
+            return Response(
+                {"status": "error", "message": "Validation error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            token = Token.objects.get(token=refresh_token, is_revoked=False)
+            token.is_revoked = True
+            token.save()
+            return Response({"status": "success", "message": "Logout Successful"})
+        except Token.DoesNotExist:
+            return Response(
+                {"status": "error", "message": "Invalid Token"}, status=status.HTTP_400_BAD_REQUEST
             )
