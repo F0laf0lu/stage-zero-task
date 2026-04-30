@@ -19,12 +19,12 @@ def jwt_service(user_data):
         "role": user_data.get("role"),
     }
     access_token = jwt.encode(
-        {"user": payload, "exp": timezone.now() + timedelta(minutes=3)},
+        {"user": payload, "exp": timezone.now() + timedelta(days=3)},
         ACCESS_TOKEN_KEY,
         algorithm="HS256",
     )
     refresh_token = jwt.encode(
-        {"user": payload, "exp": timezone.now() + timedelta(minutes=5)},
+        {"user": payload, "exp": timezone.now() + timedelta(days=5)},
         key=REFRESH_TOKEN_KEY,
         algorithm="HS256",
     )
