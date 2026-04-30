@@ -1,15 +1,23 @@
+import csv
 import math
 
+from django.http import HttpResponse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import Profile
-from core.permissions import CanCreateProfile, CanUpdateProfile
+from core.permissions import CanUpdateProfile
 from core.serializers import ProfileSerializer
 from core.services import ExternalAPIError, agify, genderize, nationalize
-from core.utils import apply_filters, parse_nl_query, parse_pagination, parse_sorting
+from core.utils import (
+    apply_filters,
+    build_profile_queryset,
+    parse_nl_query,
+    parse_pagination,
+)
 
 # import logging
 # logger = logging.getLogger(__name__)
@@ -48,7 +56,8 @@ def _paginate(queryset, page, limit, path):
 
 class ProfileListCreateView(APIView):
     throttle_scope = "profile"
-    permission_classes = [CanCreateProfile]
+    # permission_classes = [CanCreateProfile]
+    authentication_classes = []
 
     def post(self, request, *args, **kwargs):
         if "name" not in request.data:
@@ -90,52 +99,16 @@ class ProfileListCreateView(APIView):
         )
 
     def get(self, request, *args, **kwargs):
-        # --- Parse & validate sorting ---
         try:
-            sort_by, order = parse_sorting(request)
-        except ValueError as e:
-            return _error(str(e), status.HTTP_422_UNPROCESSABLE_ENTITY)
+            queryset = build_profile_queryset(request)
+        except Exception as e:
+            return Response({"status": "error", "message": str(e)})
 
         # --- Parse & validate pagination ---
         try:
             page, limit = parse_pagination(request)
         except ValueError as e:
             return _error(str(e), status.HTTP_422_UNPROCESSABLE_ENTITY)
-
-        # --- Parse numeric filter params ---
-        raw_params = {}
-        numeric_fields = {
-            "min_age": int,
-            "max_age": int,
-            "min_gender_probability": float,
-            "min_country_probability": float,
-        }
-        for field, cast in numeric_fields.items():
-            val = request.query_params.get(field)
-            if val is not None:
-                try:
-                    raw_params[field] = cast(val)
-                except (ValueError, TypeError):
-                    return _error(
-                        f"'{field}' must be a valid number",
-                        status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    )
-
-        for field in ("gender", "age_group", "country_id"):
-            val = request.query_params.get(field)
-            if val is not None:
-                raw_params[field] = val
-
-        # --- Build queryset ---
-        queryset = Profile.objects.all()
-        queryset = apply_filters(queryset, raw_params)
-
-        # --- Sorting ---
-        if sort_by:
-            prefix = "-" if order == "desc" else ""
-            queryset = queryset.order_by(f"{prefix}{sort_by}")
-        else:
-            queryset = queryset.order_by("-created_at")
 
         # --- Paginate ---
         total, items, total_pages, page_links = _paginate(queryset, page, limit, request.path)
@@ -229,3 +202,47 @@ class ProfileDetailView(APIView):
             return _error("Profile not found", status.HTTP_404_NOT_FOUND)
         profile.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ExportDataView(APIView):
+    def get(self, request, *args, **kwargs):
+        file_format = request.query_params.get("format", None)
+        if file_format is None:
+            return _error("Specify valid file format", status_code=400)
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = (
+            f'attachment; filename="profiles_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        )
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "id",
+                "name",
+                "gender",
+                "gender_probability",
+                "age",
+                "age_group",
+                "country_id",
+                "country_name",
+                "country_probability",
+                "created_at",
+            ]
+        )
+
+        profiles = build_profile_queryset(request)
+        for profile in profiles:
+            writer.writerow(
+                [
+                    profile.id,
+                    profile.name,
+                    profile.gender,
+                    profile.gender_probability,
+                    profile.age,
+                    profile.age_group,
+                    profile.country_id,
+                    profile.country_name,
+                    profile.country_probability,
+                    profile.created_at,
+                ]
+            )
+        return response

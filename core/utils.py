@@ -1,5 +1,7 @@
 import re
 
+from core.models import Profile
+
 VALID_SORT_FIELDS = {"age", "created_at", "gender_probability"}
 VALID_AGE_GROUPS = {"child", "teenager", "adult", "senior"}
 
@@ -131,3 +133,48 @@ def parse_sorting(request):
         raise ValueError("Invalid parameter type")
 
     return sort_by, order
+
+
+def build_profile_queryset(request):
+    # --- Parse & validate sorting ---
+    try:
+        sort_by, order = parse_sorting(request)
+    except ValueError:
+        raise
+
+    # --- Parse numeric filter params ---
+    raw_params = {}
+    numeric_fields = {
+        "min_age": int,
+        "max_age": int,
+        "min_gender_probability": float,
+        "min_country_probability": float,
+    }
+    for field, cast in numeric_fields.items():
+        val = request.query_params.get(field)
+        if val is not None:
+            try:
+                raw_params[field] = cast(val)
+            except (ValueError, TypeError):
+                raise
+                # return _error(
+                #     f"'{field}' must be a valid number",
+                #     status.HTTP_422_UNPROCESSABLE_ENTITY,
+                # )
+
+    for field in ("gender", "age_group", "country_id"):
+        val = request.query_params.get(field)
+        if val is not None:
+            raw_params[field] = val
+
+    # --- Build queryset ---
+    queryset = Profile.objects.all()
+    queryset = apply_filters(queryset, raw_params)
+
+    # --- Sorting ---
+    if sort_by:
+        prefix = "-" if order == "desc" else ""
+        queryset = queryset.order_by(f"{prefix}{sort_by}")
+    else:
+        queryset = queryset.order_by("-created_at")
+    return queryset
