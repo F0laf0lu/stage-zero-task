@@ -1,3 +1,5 @@
+import math
+
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -21,11 +23,19 @@ def _error(message, status_code):
     return Response({"status": "error", "message": message}, status=status_code)
 
 
-def _paginate(queryset, page, limit):
+def _paginate(queryset, page, limit, path):
     total = queryset.count()
+    total_pages = math.ceil(total / limit)
     offset = (page - 1) * limit
     items = queryset[offset : offset + limit]
-    return total, items
+    prev_page = None if page <= 1 else f"{path}/?page={page - 1}&limit={limit}"
+    next_page = None if page == total_pages else f"{path}/?page={page + 1}&limit={limit}"
+    page_links = {
+        "self": f"{path}/?page={page}&limit={limit}",
+        "next": next_page,
+        "prev": prev_page,
+    }
+    return total, items, total_pages, page_links
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +134,7 @@ class ProfileListCreateView(APIView):
             queryset = queryset.order_by("-created_at")
 
         # --- Paginate ---
-        total, items = _paginate(queryset, page, limit)
+        total, items, total_pages, page_links = _paginate(queryset, page, limit, request.path)
 
         return Response(
             {
@@ -132,6 +142,12 @@ class ProfileListCreateView(APIView):
                 "page": page,
                 "limit": limit,
                 "total": total,
+                "total_pages": total_pages,
+                "links": {
+                    "self": page_links["self"],
+                    "next": page_links["next"],
+                    "prev": page_links["prev"],
+                },
                 "data": ProfileSerializer(items, many=True).data,
             },
             status=status.HTTP_200_OK,
@@ -163,7 +179,7 @@ class ProfileSearchView(APIView):
         queryset = apply_filters(queryset, filters)
         queryset = queryset.order_by("-created_at")
 
-        total, items = _paginate(queryset, page, limit)
+        total, items, total_pages, page_links = _paginate(queryset, page, limit, request.path)
 
         return Response(
             {
@@ -171,6 +187,12 @@ class ProfileSearchView(APIView):
                 "page": page,
                 "limit": limit,
                 "total": total,
+                "total_pages": total_pages,
+                "links": {
+                    "self": page_links["self"],
+                    "next": page_links["next"],
+                    "prev": page_links["prev"],
+                },
                 "data": ProfileSerializer(items, many=True).data,
             },
             status=status.HTTP_200_OK,
