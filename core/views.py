@@ -4,12 +4,11 @@ import math
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import Profile
-from core.permissions import CanUpdateProfile
+from core.permissions import CanCreateProfile, CanUpdateProfile
 from core.serializers import ProfileSerializer
 from core.services import ExternalAPIError, agify, genderize, nationalize
 from core.utils import (
@@ -56,8 +55,7 @@ def _paginate(queryset, page, limit, path):
 
 class ProfileListCreateView(APIView):
     throttle_scope = "profile"
-    # permission_classes = [CanCreateProfile]
-    authentication_classes = []
+    permission_classes = [CanCreateProfile]
 
     def post(self, request, *args, **kwargs):
         if "name" not in request.data:
@@ -133,7 +131,7 @@ class ProfileListCreateView(APIView):
 
 class ProfileSearchView(APIView):
     throttle_scope = "profile"
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanCreateProfile]
 
     def get(self, request, *args, **kwargs):
         q = request.query_params.get("q", "").strip()
@@ -205,6 +203,9 @@ class ProfileDetailView(APIView):
 
 
 class ExportDataView(APIView):
+    throttle_scope = "profile"
+    permission_classes = [CanCreateProfile]
+
     def get(self, request, *args, **kwargs):
         file_format = request.query_params.get("format", None)
         if file_format is None:
