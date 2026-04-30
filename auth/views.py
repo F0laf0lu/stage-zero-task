@@ -131,6 +131,7 @@ class GithubCallBackView(APIView):
             user.last_login = timezone.now()
             user.save(update_fields=["last_login"])
             access_token, refresh_token = jwt_service({"id": str(user.id), "role": user.role})
+            Token.objects.create(user=user, token=refresh_token, type="refresh")
             return Response(
                 {
                     "user": UserSerializer(user).data,
