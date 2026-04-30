@@ -138,6 +138,7 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.ScopedRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {"auth": "10/minute", "profile": "60/minute"},
+    "URL_FORMAT_OVERRIDE": None,
 }
 
 AUTH_USER_MODEL = "core.User"
