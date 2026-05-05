@@ -150,6 +150,86 @@ class GithubCallBackView(APIView):
             )
 
 
+CLI_GITHUB_CLIENT_SECRET = "e79012b96b97874887127bcdaef9b56ff2a35564"
+CLI_GITHUB_CLIENT_ID = "Ov23liAotIwnyJleTrA7"
+
+
+class CliCallbakView(APIView):
+    def post(self, request, *args, **kwargs):
+        code = request.data.get("code", None)
+        code_verifier = request.data.get("code_verifier", None)
+        token_url = "https://github.com/login/oauth/access_token"
+        payload = {
+            "client_id": CLI_GITHUB_CLIENT_ID,
+            "client_secret": CLI_GITHUB_CLIENT_SECRET,
+            "code": code,
+            # "redirect_uri": "http://127.0.0.1:8000/auth/github/callback",
+            "code_verifier": code_verifier,
+        }
+        headers = {"Accept": "application/json"}
+        try:
+            response = requests.post(token_url, data=payload, headers=headers)
+            response_data = response.json()
+            if "error" in response_data:
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+            access_token = response_data.get("access_token")
+        except Exception as e:
+            return Response(
+                {"message": "Error getting token", "error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # GET USER
+        try:
+            user_url = "https://api.github.com/user"
+            user_headers = {"Authorization": f"Bearer {access_token}"}
+            github_response = requests.get(user_url, headers=user_headers)
+            github_response_data = github_response.json()
+            if "error" in github_response_data:
+                return Response(github_response_data, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response(
+                {"message": "Error getting user info", "error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # GET EMAIL
+        try:
+            email_url = "https://api.github.com/user/emails"
+            email_headers = {"Authorization": f"Bearer {access_token}"}
+            email_response = requests.get(email_url, headers=email_headers)
+            email_response_data = email_response.json()
+            if "error" in email_response_data:
+                return Response(email_response_data, status=status.HTTP_400_BAD_REQUEST)
+            email = email_response_data[0]["email"]
+
+            user, _ = User.objects.get_or_create(
+                github_id=github_response_data.get("id"),
+                defaults={
+                    "username": email,
+                    "avatar_url": github_response_data.get("avatar_url"),
+                    "email": email,
+                    "role": User.UserRole.ANALYST,
+                },
+            )
+            user.last_login = timezone.now()
+            user.save(update_fields=["last_login"])
+            access_token, refresh_token = jwt_service({"id": str(user.id), "role": user.role})
+            Token.objects.create(user=user, token=refresh_token, type="refresh")
+            return Response(
+                {
+                    "user": UserSerializer(user).data,
+                    "tokens": {"access_token": access_token, "refresh_token": refresh_token},
+                },
+                status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"message": "Error getting email", "error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
 class RefreshTokenView(APIView):
     throttle_scope = "auth"
     authentication_classes = []
